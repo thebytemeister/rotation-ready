@@ -1,5 +1,5 @@
 /* RotationReady service worker — cache-first offline support */
-const CACHE = "rotationready-v6";
+const CACHE = "rotationready-v5";
 
 const PRECACHE = [
   "./",
@@ -8,7 +8,6 @@ const PRECACHE = [
   "./js/app.js",
   "./data/manifest.js",
   "./manifest.webmanifest",
-  "./icons/logo.svg",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/icon-512-maskable.png",

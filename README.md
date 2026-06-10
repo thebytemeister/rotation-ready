@@ -1,7 +1,4 @@
-# 🐶 RotationReady — PA EOR Study Studio
-
-> Mascot: a Vizsla puppy with a stethoscope ([icons/logo.svg](icons/logo.svg)) — all app
-> icons regenerate from it via `python scripts/generate_icons.py`.
+# 🩺 RotationReady — PA EOR Study Studio
 
 A fun, interactive study guide + practice-test app built for PA students prepping for
 **PAEA End of Rotation (EOR) exams**. No installation, no account, no internet required —
