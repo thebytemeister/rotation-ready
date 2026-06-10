@@ -2,8 +2,18 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="PA EOR study studio — quizzes, flashcards, exam sim. Works offline after install.">
+<meta name="theme-color" content="#e84d8a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="RotationReady">
 <title>RotationReady — PA EOR Study Studio</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -13,6 +23,7 @@
     <select id="rotationSelect" title="Choose rotation"></select>
     <div class="chip" id="streakChip" title="Daily study streak">🔥 0</div>
     <div class="chip" id="xpChip" title="XP & level">⭐ Lv 1</div>
+    <button type="button" class="iconbtn" id="settingsBtn" title="Settings, backup &amp; install" data-action="openSettings">⚙️</button>
   </div>
 </header>
 
@@ -32,6 +43,38 @@
 <footer id="foot">
   Made with ❤️ for a future PA-C · Study aid only — always verify against current course materials &amp; guidelines.
 </footer>
+
+<div id="settingsModal" class="modal hidden" role="dialog" aria-labelledby="settingsTitle" aria-hidden="true">
+  <div class="modal-backdrop" data-action="closeSettings"></div>
+  <div class="modal-panel card">
+    <h2 id="settingsTitle">⚙️ Settings</h2>
+
+    <div id="installSection" class="settings-block hidden">
+      <h3>📲 Install app</h3>
+      <p class="sub" id="installHint">Add RotationReady to your home screen for fullscreen study sessions that work offline — perfect between patients or in hospital dead zones.</p>
+      <div class="btn-row"><button type="button" class="btn" id="installBtn" data-action="promptInstall">Install app</button></div>
+      <p class="sub install-steps" id="installSteps"></p>
+    </div>
+
+    <div class="settings-block">
+      <h3>💾 Progress backup</h3>
+      <p class="sub">Your streaks, XP, missed questions, and exam scores live in this browser. Export saves a <code>.json</code> file (Android: Downloads). Import it on a new phone after an accidental &ldquo;clear browsing data.&rdquo;</p>
+      <div class="btn-row">
+        <button type="button" class="btn" data-action="exportProgress">Export backup</button>
+        <button type="button" class="btn ghost" data-action="triggerImport">Import backup</button>
+      </div>
+      <input type="file" id="importFile" accept=".json,application/json,text/json" hidden>
+      <p id="importStatus" class="sub settings-status"></p>
+    </div>
+
+    <div class="settings-block">
+      <h3>📡 Offline status</h3>
+      <p id="offlineStatus" class="sub">Checking…</p>
+    </div>
+
+    <button type="button" class="btn ghost" data-action="closeSettings">Close</button>
+  </div>
+</div>
 
 <script src="data/manifest.js"></script>
 <script src="js/app.js"></script>

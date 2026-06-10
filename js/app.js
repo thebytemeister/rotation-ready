@@ -19,6 +19,82 @@ const APP = {
 
 const LEVEL_TITLES = ["Pre-PA", "Didactic Dynamo", "Rotation Rookie", "Clinical Ace", "EOR Slayer", "PANCE Prodigy", "Attending Whisperer"];
 const XP_PER_LEVEL = 150;
+const BACKUP_VERSION = 1;
+
+let deferredInstallPrompt = null;
+
+function isAndroid() { return /Android/i.test(navigator.userAgent); }
+function isIOS() {
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent)
+    || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+function isSamsungBrowser() { return /SamsungBrowser/i.test(navigator.userAgent); }
+function isInstalled() {
+  return window.matchMedia("(display-mode: standalone)").matches
+    || window.matchMedia("(display-mode: fullscreen)").matches
+    || window.navigator.standalone === true;
+}
+function canUsePwa() { return location.protocol !== "file:" && ("serviceWorker" in navigator); }
+
+function installButtonLabel() {
+  if (deferredInstallPrompt) return "Install app";
+  if (isAndroid()) return "Install app";
+  if (isIOS()) return "Add to Home Screen";
+  return "Install app";
+}
+
+function installHintText() {
+  if (isInstalled()) return "RotationReady is on your home screen — opens fullscreen and works offline.";
+  if (deferredInstallPrompt) {
+    return isAndroid()
+      ? "Tap Install — Android will add a real app icon to your home screen. Works offline after the first open (great for hospital dead zones)."
+      : "Tap below to add RotationReady to your home screen. Works offline after the first visit.";
+  }
+  if (isAndroid()) {
+    return "Add RotationReady to your Samsung home screen for fullscreen study sessions that work offline — perfect between patients or in dead zones.";
+  }
+  if (isIOS()) {
+    return "Add RotationReady to your home screen for fullscreen study that works offline.";
+  }
+  return "Install for fullscreen study sessions that work offline after your first visit.";
+}
+
+function installStepsText() {
+  if (isInstalled() || deferredInstallPrompt) return "";
+  if (isAndroid() && isSamsungBrowser()) {
+    return "<b>Samsung Internet:</b> tap ☰ (menu) → <b>Add page to</b> → <b>Home screen</b>.<br><b>Or in Chrome:</b> tap ⋮ → <b>Install app</b>.";
+  }
+  if (isAndroid()) {
+    return "<b>Chrome on Android:</b> tap ⋮ (three dots, top right) → <b>Install app</b> or <b>Add to Home screen</b>.";
+  }
+  if (isIOS()) {
+    return "<b>Safari:</b> Share → <b>Add to Home Screen</b>.";
+  }
+  return "Browser menu → <b>Install app</b> or <b>Add to Home screen</b>.";
+}
+
+function shouldShowInstallBanner() {
+  if (!canUsePwa() || isInstalled()) return false;
+  if (gstore().dismissedInstallBanner) return false;
+  return isAndroid() || isIOS() || !!deferredInstallPrompt;
+}
+
+function renderInstallBanner() {
+  if (!shouldShowInstallBanner()) return "";
+  const title = isAndroid() ? "📲 Install on your phone" : "📲 Install app";
+  const body = isAndroid()
+    ? "Get a home-screen icon that opens fullscreen and <b>works offline</b> — ideal on Samsung between patients or where signal drops."
+    : "Add to your home screen for fullscreen study that works offline.";
+  return `<div class="card install-banner">
+    <h2>${title}</h2>
+    <p class="sub">${body}</p>
+    <div class="btn-row">
+      <button type="button" class="btn" data-action="promptInstall">${esc(installButtonLabel())}</button>
+      <button type="button" class="btn ghost small" data-action="dismissInstallBanner">Not now</button>
+    </div>
+    ${installStepsText() ? '<p class="sub install-steps">' + installStepsText() + "</p>" : ""}
+  </div>`;
+}
 
 /* ---------------- storage ---------------- */
 function store() {
@@ -31,6 +107,171 @@ function gstore() {
   catch (e) { return {}; }
 }
 function saveGstore(g) { localStorage.setItem("rr:global", JSON.stringify(g)); }
+
+function allProgressKeys() {
+  const keys = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith("rr:")) keys.push(k);
+  }
+  return keys;
+}
+
+function exportProgress() {
+  const data = {};
+  for (const k of allProgressKeys()) {
+    try { data[k] = JSON.parse(localStorage.getItem(k)); }
+    catch (e) { data[k] = localStorage.getItem(k); }
+  }
+  const payload = {
+    version: BACKUP_VERSION,
+    app: "RotationReady",
+    exportedAt: new Date().toISOString(),
+    rotations: (window.STUDY_MANIFEST && window.STUDY_MANIFEST.rotations || []).map(r => r.id),
+    data,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "rotationready-backup-" + new Date().toISOString().slice(0, 10) + ".json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+  const where = isAndroid() ? "Check your Downloads folder (or the notification shade)." : "Keep this file somewhere safe.";
+  setImportStatus("Backup downloaded — " + where + " Email or cloud-drive it so you can import on a new phone.", "ok");
+}
+
+function importProgress(file, merge) {
+  return new Promise((res, rej) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const payload = JSON.parse(reader.result);
+        if (!payload || payload.app !== "RotationReady" || !payload.data || typeof payload.data !== "object") {
+          rej(new Error("Not a valid RotationReady backup file."));
+          return;
+        }
+        if (payload.version > BACKUP_VERSION) {
+          rej(new Error("This backup was made with a newer version of RotationReady. Update the app first."));
+          return;
+        }
+        const keys = Object.keys(payload.data).filter(k => k.startsWith("rr:"));
+        if (!keys.length) {
+          rej(new Error("Backup file contains no progress data."));
+          return;
+        }
+        if (!merge) {
+          for (const k of allProgressKeys()) localStorage.removeItem(k);
+        }
+        for (const k of keys) {
+          localStorage.setItem(k, JSON.stringify(payload.data[k]));
+        }
+        res({ keys: keys.length, exportedAt: payload.exportedAt });
+      } catch (e) { rej(e); }
+    };
+    reader.onerror = () => rej(reader.error || new Error("Could not read file."));
+    reader.readAsText(file);
+  });
+}
+
+function setImportStatus(msg, kind) {
+  const el = $("#importStatus");
+  if (!el) return;
+  el.textContent = msg || "";
+  el.className = "sub settings-status" + (kind ? " " + kind : "");
+}
+
+function updateOfflineStatus() {
+  const el = $("#offlineStatus");
+  if (!el) return;
+  const swOk = "serviceWorker" in navigator && location.protocol !== "file:";
+  const online = navigator.onLine;
+  if (location.protocol === "file:") {
+    el.innerHTML = "Opened as a local file — quizzes work, but <b>install &amp; offline cache need a web server</b> (GitHub Pages or <code>npx serve</code>). Double-click still works for studying.";
+    return;
+  }
+  if (!swOk) {
+    el.textContent = online ? "Browser doesn't support offline install." : "You're offline. Reconnect once to cache the app.";
+    return;
+  }
+  if (isInstalled()) {
+    el.textContent = "Installed app mode — studying offline from cache. Progress saves on this device.";
+    return;
+  }
+  el.innerHTML = online
+    ? (isAndroid()
+      ? "Online — open once to cache everything. Then install from above (⋮ → Install app in Chrome) for offline study anywhere."
+      : "Online — content caches after your first visit. Install for offline study.")
+    : "Offline mode active — you're studying from cache. Progress still saves locally.";
+}
+
+function updateInstallSection() {
+  const section = $("#installSection");
+  if (!section) return;
+  if (!canUsePwa()) {
+    section.classList.add("hidden");
+    return;
+  }
+  section.classList.remove("hidden");
+  const hint = $("#installHint");
+  const steps = $("#installSteps");
+  const btn = $("#installBtn");
+  if (hint) hint.textContent = installHintText();
+  if (steps) {
+    const t = installStepsText();
+    steps.innerHTML = t;
+    steps.style.display = t ? "" : "none";
+  }
+  if (btn) {
+    if (isInstalled()) {
+      btn.textContent = "✓ Installed";
+      btn.disabled = true;
+    } else {
+      btn.textContent = installButtonLabel();
+      btn.disabled = false;
+    }
+  }
+}
+
+async function promptInstallApp() {
+  if (isInstalled()) return;
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    try {
+      const choice = await deferredInstallPrompt.userChoice;
+      if (choice.outcome === "accepted") {
+        setImportStatus("Installed — look for the RotationReady icon on your home screen.", "ok");
+      }
+    } finally {
+      deferredInstallPrompt = null;
+      updateInstallSection();
+      if (APP.view === "home") render();
+    }
+    return;
+  }
+  if (!canUsePwa()) {
+    setImportStatus("Install needs the GitHub Pages link — not a saved file on your phone.", "err");
+    return;
+  }
+  openSettings();
+  setImportStatus(installStepsText().replace(/<[^>]+>/g, ""), "ok");
+}
+
+function openSettings() {
+  const modal = $("#settingsModal");
+  if (!modal) return;
+  modal.classList.remove("hidden");
+  modal.setAttribute("aria-hidden", "false");
+  setImportStatus("");
+  updateOfflineStatus();
+  updateInstallSection();
+}
+
+function closeSettings() {
+  const modal = $("#settingsModal");
+  if (!modal) return;
+  modal.classList.add("hidden");
+  modal.setAttribute("aria-hidden", "true");
+}
 
 function touchStreak() {
   const g = gstore();
@@ -233,6 +474,7 @@ function renderHome() {
   ).join("") || '<p class="sub">No simulated exams yet — try Exam Sim when you\'re ready.</p>';
 
   return `
+  ${renderInstallBanner()}
   <div class="card" style="background:linear-gradient(120deg, color-mix(in srgb, var(--accent) 9%, #fff), color-mix(in srgb, var(--accent2) 9%, #fff))">
     <h2>${d.icon} ${esc(d.name)} Rotation</h2>
     <p class="sub">${esc(d.tagline || "")}</p>
@@ -833,6 +1075,17 @@ document.addEventListener("click", e => {
     APP.view = "quiz";
     render();
   }
+
+  /* settings / backup / install */
+  else if (act === "openSettings") openSettings();
+  else if (act === "closeSettings") closeSettings();
+  else if (act === "exportProgress") exportProgress();
+  else if (act === "triggerImport") $("#importFile").click();
+  else if (act === "promptInstall") promptInstallApp();
+  else if (act === "dismissInstallBanner") {
+    const g = gstore(); g.dismissedInstallBanner = true; saveGstore(g);
+    render();
+  }
 });
 
 // checkbox/radio pill styling + change-based actions
@@ -855,8 +1108,57 @@ document.addEventListener("change", e => {
 
 $("#rotationSelect").addEventListener("change", e => selectRotation(e.target.value));
 
+const importInput = $("#importFile");
+if (importInput) {
+  importInput.addEventListener("change", async e => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    const replace = confirm(
+      "Import backup?\n\nOK = replace ALL current progress with this backup\nCancel = merge (keep current data for anything not in the backup)"
+    );
+    const merge = !replace;
+    setImportStatus("Importing…");
+    try {
+      const result = await importProgress(file, merge);
+      const when = result.exportedAt ? new Date(result.exportedAt).toLocaleDateString() : "unknown date";
+      setImportStatus("Restored " + result.keys + " data key(s) from backup dated " + when + ".", "ok");
+      renderChips();
+      if (APP.rotation) go("home");
+      else render();
+    } catch (err) {
+      setImportStatus(err.message || "Import failed.", "err");
+    }
+  });
+}
+
+window.addEventListener("beforeinstallprompt", e => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  updateInstallSection();
+  if (APP.view === "home") render();
+});
+
+window.addEventListener("appinstalled", () => {
+  deferredInstallPrompt = null;
+  updateInstallSection();
+  updateOfflineStatus();
+  if (APP.view === "home") render();
+});
+
+window.addEventListener("online", updateOfflineStatus);
+window.addEventListener("offline", updateOfflineStatus);
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") closeSettings();
+});
+
 /* ================= init ================= */
 (function init() {
+  if ("serviceWorker" in navigator && location.protocol !== "file:") {
+    navigator.serviceWorker.register("./sw.js").catch(err => console.warn("SW registration failed:", err));
+  }
+
   const m = window.STUDY_MANIFEST;
   if (!m || !m.rotations || !m.rotations.length) {
     $("#app").innerHTML = '<div class="card center"><p>⚠️ No rotations found in data/manifest.js</p></div>';
@@ -866,5 +1168,6 @@ $("#rotationSelect").addEventListener("change", e => selectRotation(e.target.val
   const last = gstore().lastRotation;
   const startId = m.rotations.some(r => r.id === last) ? last : m.rotations[0].id;
   renderChips();
+  updateOfflineStatus();
   selectRotation(startId);
 })();

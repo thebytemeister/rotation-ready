@@ -4,21 +4,22 @@ A fun, interactive study guide + practice-test app built for PA students preppin
 **PAEA End of Rotation (EOR) exams**. No installation, no account, no internet required —
 it's a single web app that runs straight from this folder.
 
-Ships fully loaded with a **Women's Health** module (57 exam-style questions with
-explanations, 40 flashcards, and a high-yield study guide) organized around the PAEA
+Ships fully loaded with a **Women's Health** module (**133** exam-style questions with
+explanations, **113** flashcards, and a high-yield study guide) organized around the PAEA
 Women's Health EOR blueprint.
 
 ---
 
 ## ▶️ How to run it
 
-**Just double-click `index.html`.** That's it — it opens in your browser and works offline.
+**Best on phone:** open the [GitHub Pages link](https://thebytemeister.github.io/rotation-ready/),
+tap **Install app** (or Chrome ⋮ → Install app) for a home-screen icon that works offline.
 
-Tip: right-click `index.html` → *Send to → Desktop (create shortcut)* and rename it
-something motivational. 💪
+**On desktop:** double-click `index.html` — quizzes work immediately; install/offline cache
+need a web server (`npx serve`) or GitHub Pages.
 
-All progress (scores, streaks, XP, missed questions, exam date) is saved automatically in
-the browser via localStorage — so always use the same browser to keep the streak alive.
+All progress (scores, streaks, XP, missed questions, exam date) saves in the browser.
+Use **⚙️ Settings → Export backup** so progress survives a phone swap or cleared browser data.
 
 ---
 
@@ -32,6 +33,7 @@ the browser via localStorage — so always use the same browser to keep the stre
 | ⚡ **Quiz** | Pick topics & length, get instant feedback with full explanations and 🧠 test-taking tips after every question |
 | ⏱️ **Exam Sim** | Real test conditions: ~1 min/question timer, no feedback until the end, flag-for-review, question palette, score report by topic |
 | 🔁 **Missed** | Every question ever missed collects here until it's answered correctly — the highest-yield drill there is |
+| 🔥 **Cram Mode** | One-click session: your misses + weakest topics + fresh questions (up to 25) |
 
 Confetti is involved when scores are good. This is non-negotiable. 🎉
 
