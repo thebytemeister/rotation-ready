@@ -237,7 +237,8 @@ function renderHome() {
     <h2>${d.icon} ${esc(d.name)} Rotation</h2>
     <p class="sub">${esc(d.tagline || "")}</p>
     <div class="btn-row">
-      <button class="btn" data-action="nav" data-arg="quiz">⚡ Quick Quiz</button>
+      <button class="btn" data-action="startCram" title="Auto-builds the highest-yield session: your misses + weakest topics + unseen questions">🔥 Cram Mode</button>
+      <button class="btn ghost" data-action="nav" data-arg="quiz">⚡ Quick Quiz</button>
       <button class="btn ghost" data-action="nav" data-arg="flash">🃏 Flashcards</button>
       <button class="btn ghost" data-action="nav" data-arg="study">📖 Study Guide</button>
     </div>
@@ -369,11 +370,16 @@ function renderQuiz() {
 
 function renderQuizSetup() {
   const d = APP.data;
+  const cramCard = `<div class="card cramcard">
+    <h2>🔥 Cram Mode</h2>
+    <p class="sub">One click builds the highest-yield session possible: every question you've ever missed, plus your three weakest topics, plus fresh questions you haven't seen yet. Perfect for the final stretch before exam day.</p>
+    <div class="btn-row"><button class="btn" data-action="startCram">Build my cram session →</button></div>
+  </div>`;
   const cats = d.categories.map(c => {
     const n = d.questions.filter(q => q.cat === c.id).length;
     return `<label class="on"><input type="checkbox" class="quizCat" value="${c.id}" checked>${c.icon} ${esc(c.name)} (${n})</label>`;
   }).join("");
-  return `<div class="card">
+  return cramCard + `<div class="card">
     <h2>⚡ Quick Quiz</h2>
     <p class="sub">Instant feedback with full explanations after every question — the best way to learn.</p>
     <h3>Topics</h3>
@@ -392,6 +398,56 @@ function startQuiz(questionList, lenWanted) {
   const qs = shuffle(questionList).slice(0, lenWanted);
   APP.quiz = { qs: prepQuestions(qs), i: 0, correct: 0, finished: false, results: [] };
   render();
+}
+
+/* ---- Cram Mode: misses + weakest topics + unseen filler ---- */
+const CRAM_TARGET = 25;
+
+function buildCram() {
+  const d = APP.data;
+  const s = store();
+  const stats = s.qstats || {};
+  const missedMap = s.missed || {};
+
+  // rank categories weakest-first; unstarted sit at 0.6 so true weak spots
+  // outrank them but they still beat mastered topics
+  const byCat = accuracyByCategory();
+  const rank = d.categories
+    .map(c => ({ id: c.id, acc: byCat[c.id].a ? byCat[c.id].c / byCat[c.id].a : 0.6 }))
+    .sort((a, b) => a.acc - b.acc);
+  const weakCats = rank.slice(0, 3).map(r => r.id);
+
+  const missed = Object.keys(missedMap).map(qById).filter(Boolean);
+  const unseenWeak = d.questions.filter(q => !stats[q.id] && weakCats.includes(q.cat) && !missedMap[q.id]);
+  const seenWeak = d.questions
+    .filter(q => stats[q.id] && weakCats.includes(q.cat) && !missedMap[q.id])
+    .sort((a, b) => (stats[a.id].last || 0) - (stats[b.id].last || 0)); // least recently seen first
+  const unseenOther = d.questions.filter(q => !stats[q.id] && !weakCats.includes(q.cat));
+
+  const target = Math.min(CRAM_TARGET, d.questions.length);
+  const pick = [];
+  const used = new Set();
+  const take = arr => { for (const q of arr) { if (pick.length >= target) break; if (!used.has(q.id)) { used.add(q.id); pick.push(q); } } };
+
+  take(shuffle(missed));
+  const nMissed = pick.length;
+  take(shuffle(unseenWeak));
+  const nWeakNew = pick.length - nMissed;
+  take(seenWeak);
+  const nReview = pick.length - nMissed - nWeakNew;
+  take(shuffle(unseenOther));
+  const nFresh = pick.length - nMissed - nWeakNew - nReview;
+
+  return { qs: pick, counts: { missed: nMissed, weakNew: nWeakNew, review: nReview, fresh: nFresh }, weakCats };
+}
+
+function cramDesc(c) {
+  const parts = [];
+  if (c.counts.missed) parts.push("<b>" + c.counts.missed + "</b> missed");
+  if (c.counts.weakNew) parts.push("<b>" + c.counts.weakNew + "</b> new from weak topics");
+  if (c.counts.review) parts.push("<b>" + c.counts.review + "</b> weak-topic review");
+  if (c.counts.fresh) parts.push("<b>" + c.counts.fresh + "</b> fresh");
+  return parts.join(" · ") + " &nbsp;🎯 " + c.weakCats.map(id => catIcon(id) + " " + esc(catName(id))).join(", ");
 }
 
 function renderQuizQuestion() {
@@ -421,8 +477,9 @@ function renderQuizQuestion() {
   }
 
   return `<div class="card">
+    ${z.cram ? '<div class="cramstrip">🔥 <b>Cram session:</b> ' + cramDesc(z.cram) + "</div>" : ""}
     <div class="qmeta">
-      <span>Question ${z.i + 1} / ${z.qs.length}</span>
+      <span>${z.cram ? "🔥 " : ""}Question ${z.i + 1} / ${z.qs.length}</span>
       <span>${catIcon(q.cat)} ${esc(catName(q.cat))} · Score ${z.correct}/${z.i + (answered ? 1 : 0)}</span>
     </div>
     <div class="bar thin" style="margin-top:8px"><i style="width:${Math.round(100 * z.i / z.qs.length)}%"></i></div>
@@ -444,8 +501,10 @@ function renderQuizResults() {
     <h2>${pct >= 75 ? "🎉 Crushed it!" : pct >= 50 ? "💪 Solid work!" : "🌱 Growth round!"}</h2>
     ${scoreRing(pct)}
     <p class="sub">${z.correct} of ${z.qs.length} correct · +${z.correct * 10} XP earned</p>
+    ${z.cram ? '<p class="sub">🔥 Missed bank after this session: <b>' + Object.keys(store().missed || {}).filter(id => qById(id)).length + "</b> question(s) left to conquer</p>" : ""}
     <div class="btn-row" style="justify-content:center">
       ${missed.length ? '<button class="btn" data-action="quizRetryMissed">🔁 Retry the ' + missed.length + ' missed</button>' : ""}
+      ${z.cram ? '<button class="btn" data-action="startCram">🔥 New cram session</button>' : ""}
       <button class="btn ghost" data-action="quizAgain">⚡ New quiz</button>
     </div>
   </div>
@@ -717,6 +776,13 @@ document.addEventListener("click", e => {
     startQuiz(missed, missed.length);
   }
   else if (act === "quizAgain") { APP.quiz = null; render(); }
+  else if (act === "startCram") {
+    const c = buildCram();
+    if (!c.qs.length) { alert("No questions available for a cram session yet!"); return; }
+    APP.quiz = { qs: prepQuestions(shuffle(c.qs)), i: 0, correct: 0, finished: false, results: [], cram: c };
+    APP.view = "quiz";
+    render();
+  }
 
   /* flashcards */
   else if (act === "flashFlip") { APP.flash.flipped = !APP.flash.flipped; render(); }
