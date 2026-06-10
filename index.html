@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RotationReady — PA EOR Study Studio</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header id="topbar">
+  <div class="logo">🩺 <span>Rotation<b>Ready</b></span></div>
+  <div class="topbar-right">
+    <select id="rotationSelect" title="Choose rotation"></select>
+    <div class="chip" id="streakChip" title="Daily study streak">🔥 0</div>
+    <div class="chip" id="xpChip" title="XP & level">⭐ Lv 1</div>
+  </div>
+</header>
+
+<nav id="tabs">
+  <button data-action="nav" data-arg="home">🏠 Home</button>
+  <button data-action="nav" data-arg="study">📖 Study</button>
+  <button data-action="nav" data-arg="flash">🃏 Flashcards</button>
+  <button data-action="nav" data-arg="quiz">⚡ Quiz</button>
+  <button data-action="nav" data-arg="exam">⏱️ Exam Sim</button>
+  <button data-action="nav" data-arg="missed">🔁 Missed</button>
+</nav>
+
+<main id="app">
+  <div class="card center"><p>Loading your study studio…</p></div>
+</main>
+
+<footer id="foot">
+  Made with ❤️ for a future PA-C · Study aid only — always verify against current course materials &amp; guidelines.
+</footer>
+
+<script src="data/manifest.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
