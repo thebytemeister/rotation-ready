@@ -15,8 +15,10 @@ window.STUDY_MANIFEST = {
       files: [
         "womens-health/module.js",
         "womens-health/flashcards.js",
+        "womens-health/flashcards-2.js",
         "womens-health/questions-1.js",
-        "womens-health/questions-2.js"
+        "womens-health/questions-2.js",
+        "womens-health/questions-3.js"
       ]
     }
     /* Next rotation goes here, e.g.:

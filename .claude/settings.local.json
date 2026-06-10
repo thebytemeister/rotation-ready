@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git remote *)",
+      "Bash(git branch *)",
+      "Bash(git push *)",
+      "PowerShell(node --check data\\\\womens-health\\\\questions-3.js)",
+      "PowerShell(node --check data\\\\womens-health\\\\flashcards-2.js)",
+      "PowerShell(node --check data\\\\manifest.js)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
+    ]
+  }
+}
