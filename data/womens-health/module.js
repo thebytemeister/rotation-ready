@@ -224,6 +224,18 @@ window.__ROT["womens-health"].module = {
       pearl: "The week numbers ARE the test: 10 cfDNA, 18-22 anatomy, 24-28 glucose, 27-36 Tdap, 28 RhoGAM, 36-37 GBS. Make it a song if you have to."
     },
     {
+      cat: "pregnancy", title: "Antenatal testing & screening",
+      bullets: [
+        "<b>cfDNA (NIPT)</b> from 10 wk and the quad screen are SCREENS; positives are confirmed with <b>CVS (10-13 wk)</b> or <b>amniocentesis (≥15 wk)</b> — never act on a screen alone.",
+        "<b>Nonstress test (NST):</b> reactive = 2 accelerations (15 bpm × 15 s) in 20 min. Nonreactive → vibroacoustic stimulation → <b>biophysical profile</b>.",
+        "<b>BPP</b> = NST + ultrasound for breathing, movement, tone, and amniotic fluid (each 0 or 2). <b>8–10 reassuring</b>; ≤4 → move toward delivery.",
+        "<b>FGR</b> (EFW &lt;10th percentile): serial <b>umbilical artery Dopplers</b> — ↑resistance → absent → <b>reversed end-diastolic flow (deliver)</b>.",
+        "<b>Oligohydramnios at/past term</b> = failing placental reserve → induce. Post-term: offer induction at <b>41 wk</b>, never pass 42.",
+        "Fundal height ±2-3 cm of weeks after 20 wk; bigger mismatch → ultrasound (twins, polyhydramnios, macrosomia vs FGR)."
+      ],
+      pearl: "Antenatal testing is an escalation ladder: NST → BPP → delivery decision. The exam's favorite error is jumping a rung — match the aggressiveness of your answer to the rung you're on."
+    },
+    {
       cat: "pregnancy", title: "Normal labor & delivery",
       bullets: [
         "<b>Stage 1:</b> onset → full dilation (10 cm). Latent phase up to 6 cm; <b>active phase begins at 6 cm</b> (faster dilation expected). <b>Stage 2:</b> full dilation → delivery of baby. <b>Stage 3:</b> delivery of placenta (normal &lt;30 min).",
@@ -293,6 +305,18 @@ window.__ROT["womens-health"].module = {
         "Umbilical <b>cord prolapse</b>: cord felt/seen after ROM + fetal bradycardia → elevate presenting part, knee-chest position, emergent cesarean."
       ],
       pearl: "Boggy uterus + bleeding = massage and oxytocin before anything fancy. Know the two drug vetoes: methylergonovine–hypertension, carboprost–asthma. Tests love those."
+    },
+    {
+      cat: "postpartum", title: "Labor management & rare catastrophes",
+      bullets: [
+        "<b>Active-phase arrest</b> needs ADEQUATE power: <b>≥200 Montevideo units</b> by IUPC. Below that → oxytocin augmentation, not cesarean. Arrest = ≥6 cm + ROM + no change ×4 h (adequate ctx) or ×6 h (inadequate, on oxytocin).",
+        "<b>Perineal lacerations:</b> 1° mucosa/skin → 2° perineal muscles → <b>3° anal sphincter</b> → 4° rectal mucosa. Classify by deepest structure.",
+        "<b>Uterine inversion</b> (post cord traction; no palpable fundus + mass at introitus + vasovagal shock): stop uterotonics → relax → <b>manually replace → THEN uterotonics</b>.",
+        "<b>Amniotic fluid embolism:</b> sudden hypoxia → cardiovascular collapse → <b>DIC</b>. Purely supportive care + massive transfusion.",
+        "<b>Vasa previa:</b> painless bleeding at ROM + abrupt fetal bradycardia/sinusoidal tracing (the blood is FETAL) → emergent cesarean.",
+        "<b>External cephalic version</b> for breech at ≥37 wk (~50% success); fails/declined → planned cesarean. TOLAC contraindicated with prior classical incision."
+      ],
+      pearl: "For every catastrophe, learn its one pathognomonic phrase: 'loss of station' = rupture, 'no fundus + mass below' = inversion, 'collapse then bleeding everywhere' = AFE, 'baby crashes at ROM' = vasa previa."
     },
     {
       cat: "postpartum", title: "Postpartum fever & mood",
