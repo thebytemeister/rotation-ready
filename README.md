@@ -33,7 +33,7 @@ Use **⚙️ Settings → Export backup** so progress survives a phone swap or c
 | ⚡ **Quiz** | Pick topics & length, get instant feedback with full explanations and 🧠 test-taking tips after every question |
 | ⏱️ **Exam Sim** | Real test conditions: ~1 min/question timer, no feedback until the end, flag-for-review, question palette, score report by topic |
 | 🔁 **Missed** | Every question ever missed collects here until it's answered correctly — the highest-yield drill there is |
-| 🔥 **Cram Mode** | One-click session: your misses + weakest topics + fresh questions (up to 25) |
+| 🔥 **Cram Mode** | One-click **quiz** (misses + weak topics, up to 25) or **flashcard** deck (again-later + weak topics, up to 20) |
 
 Confetti is involved when scores are good. This is non-negotiable. 🎉
 

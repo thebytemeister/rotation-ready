@@ -362,6 +362,31 @@ function catIcon(id) {
 }
 function qById(id) { return APP.data.questions.find(q => q.id === id); }
 
+function fcKey(card) {
+  const plain = String(card.front).replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+  return card.cat + "::" + plain.slice(0, 120);
+}
+
+function recordFcGot(card) {
+  const s = store();
+  s.fcstats = s.fcstats || {};
+  const k = fcKey(card);
+  const st = s.fcstats[k] || { g: 0, a: 0 };
+  st.g++; st.last = Date.now();
+  s.fcstats[k] = st;
+  saveStore(s);
+}
+
+function recordFcAgain(card) {
+  const s = store();
+  s.fcstats = s.fcstats || {};
+  const k = fcKey(card);
+  const st = s.fcstats[k] || { g: 0, a: 0 };
+  st.a++; st.last = Date.now();
+  s.fcstats[k] = st;
+  saveStore(s);
+}
+
 function recordAnswer(qid, correct) {
   const s = store();
   s.qstats = s.qstats || {};
@@ -479,7 +504,8 @@ function renderHome() {
     <h2>${d.icon} ${esc(d.name)} Rotation</h2>
     <p class="sub">${esc(d.tagline || "")}</p>
     <div class="btn-row">
-      <button class="btn" data-action="startCram" title="Auto-builds the highest-yield session: your misses + weakest topics + unseen questions">🔥 Cram Mode</button>
+      <button class="btn" data-action="startCram" title="Questions: misses + weakest topics + unseen">🔥 Cram quiz</button>
+      <button class="btn" data-action="startCramFlash" title="Flashcards: again-later cards + weakest topics + unseen">🔥 Cram cards</button>
       <button class="btn ghost" data-action="nav" data-arg="quiz">⚡ Quick Quiz</button>
       <button class="btn ghost" data-action="nav" data-arg="flash">🃏 Flashcards</button>
       <button class="btn ghost" data-action="nav" data-arg="study">📖 Study Guide</button>
@@ -552,34 +578,67 @@ function startFlash(catId) {
     done: 0,
     total: cards.length,
     flipped: false,
+    cram: null,
   };
 }
+
+function renderFlashSetup() {
+  const d = APP.data;
+  const cramCard = `<div class="card cramcard">
+    <h2>🔥 Cram Cards</h2>
+    <p class="sub">Builds a focused deck from cards you've marked <b>Again later</b>, your three weakest quiz topics, plus fresh cards you haven't mastered yet. Great for quick reps between patients.</p>
+    <div class="btn-row"><button class="btn" data-action="startCramFlash">Build my cram deck →</button></div>
+  </div>`;
+  const opts = ['<option value="all">All topics (' + d.flashcards.length + ")</option>"]
+    .concat(d.categories.map(c => {
+      const n = d.flashcards.filter(x => x.cat === c.id).length;
+      return '<option value="' + c.id + '">' + c.icon + " " + esc(c.name) + " (" + n + ")</option>";
+    })).join("");
+  return cramCard + `<div class="card">
+    <h2>🃏 Flashcards</h2>
+    <p class="sub">Flip, learn, recycle anything that doesn't stick.</p>
+    <h3>Topic</h3>
+    <select id="flashTopic" class="inline" style="width:100%;max-width:320px;margin-bottom:12px">${opts}</select>
+    <div class="btn-row"><button class="btn" data-action="startFlashDeck">Start deck →</button></div>
+  </div>`;
+}
+
 function renderFlash() {
   const d = APP.data;
-  if (!APP.flash) startFlash("all");
+  if (!APP.flash) return renderFlashSetup();
   const f = APP.flash;
+  const inCram = !!f.cram;
 
   const opts = ['<option value="all">All topics (' + d.flashcards.length + ")</option>"]
     .concat(d.categories.map(c => {
       const n = d.flashcards.filter(x => x.cat === c.id).length;
       return '<option value="' + c.id + '"' + (f.cat === c.id ? " selected" : "") + ">" + c.icon + " " + esc(c.name) + " (" + n + ")</option>";
     })).join("");
+  const topicSelect = inCram
+    ? '<span class="sub">🔥 Cram deck</span>'
+    : '<select class="inline" data-action-change="flashFilter">' + opts + "</select>";
 
   if (!f.deck.length || f.i >= f.deck.length) {
     return `<div class="card">
-      <div class="qmeta"><span>🃏 Flashcards</span><select class="inline" data-action-change="flashFilter">${opts}</select></div>
+      ${inCram ? '<div class="cramstrip">🔥 <b>Cram deck complete!</b> ' + cramFlashDesc(f.cram) + "</div>" : ""}
+      <div class="qmeta"><span>🃏 Flashcards</span>${topicSelect}</div>
       <div class="empty"><span class="bigemoji">🎉</span>
       ${f.total ? "Deck complete! <b>" + f.done + "</b> cards mastered this round." : "No cards in this deck yet."}
-      <div class="btn-row" style="justify-content:center"><button class="btn" data-action="flashRestart">🔄 Go again</button></div></div>
+      <div class="btn-row" style="justify-content:center">
+        ${inCram ? '<button class="btn" data-action="startCramFlash">🔥 New cram deck</button>' : ""}
+        <button class="btn${inCram ? " ghost" : ""}" data-action="flashRestart">🔄 Go again</button>
+        ${inCram ? '<button class="btn ghost" data-action="flashDone">🃏 Pick a new deck</button>' : ""}
+      </div></div>
     </div>`;
   }
 
   const card = f.deck[f.i];
   const pct = Math.round(100 * f.done / f.total);
   return `<div class="card">
+    ${inCram ? '<div class="cramstrip">🔥 <b>Cram deck:</b> ' + cramFlashDesc(f.cram) + "</div>" : ""}
     <div class="qmeta">
-      <span>Card ${f.done + 1} of ${f.total}</span>
-      <select class="inline" data-action-change="flashFilter">${opts}</select>
+      <span>${inCram ? "🔥 " : ""}Card ${f.done + 1} of ${f.total}</span>
+      ${topicSelect}
     </div>
     <div class="bar thin" style="margin-top:8px"><i style="width:${pct}%"></i></div>
     <div class="flash-stage">
@@ -614,8 +673,11 @@ function renderQuizSetup() {
   const d = APP.data;
   const cramCard = `<div class="card cramcard">
     <h2>🔥 Cram Mode</h2>
-    <p class="sub">One click builds the highest-yield session possible: every question you've ever missed, plus your three weakest topics, plus fresh questions you haven't seen yet. Perfect for the final stretch before exam day.</p>
-    <div class="btn-row"><button class="btn" data-action="startCram">Build my cram session →</button></div>
+    <p class="sub">Highest-yield sessions built from your weak spots — no setup required.</p>
+    <div class="btn-row">
+      <button class="btn" data-action="startCram">Cram quiz →</button>
+      <button class="btn ghost" data-action="startCramFlash">Cram cards →</button>
+    </div>
   </div>`;
   const cats = d.categories.map(c => {
     const n = d.questions.filter(q => q.cat === c.id).length;
@@ -644,6 +706,16 @@ function startQuiz(questionList, lenWanted) {
 
 /* ---- Cram Mode: misses + weakest topics + unseen filler ---- */
 const CRAM_TARGET = 25;
+const CRAM_FLASH_TARGET = 20;
+
+function weakCategories() {
+  const byCat = accuracyByCategory();
+  return APP.data.categories
+    .map(c => ({ id: c.id, acc: byCat[c.id].a ? byCat[c.id].c / byCat[c.id].a : 0.6 }))
+    .sort((a, b) => a.acc - b.acc)
+    .slice(0, 3)
+    .map(r => r.id);
+}
 
 function buildCram() {
   const d = APP.data;
@@ -653,11 +725,7 @@ function buildCram() {
 
   // rank categories weakest-first; unstarted sit at 0.6 so true weak spots
   // outrank them but they still beat mastered topics
-  const byCat = accuracyByCategory();
-  const rank = d.categories
-    .map(c => ({ id: c.id, acc: byCat[c.id].a ? byCat[c.id].c / byCat[c.id].a : 0.6 }))
-    .sort((a, b) => a.acc - b.acc);
-  const weakCats = rank.slice(0, 3).map(r => r.id);
+  const weakCats = weakCategories();
 
   const missed = Object.keys(missedMap).map(qById).filter(Boolean);
   const unseenWeak = d.questions.filter(q => !stats[q.id] && weakCats.includes(q.cat) && !missedMap[q.id]);
@@ -681,6 +749,72 @@ function buildCram() {
   const nFresh = pick.length - nMissed - nWeakNew - nReview;
 
   return { qs: pick, counts: { missed: nMissed, weakNew: nWeakNew, review: nReview, fresh: nFresh }, weakCats };
+}
+
+function buildCramFlash() {
+  const d = APP.data;
+  const fcstats = store().fcstats || {};
+  const weakCats = weakCategories();
+  const all = d.flashcards.map(card => ({ card, key: fcKey(card) }));
+
+  const struggling = all.filter(x => {
+    const st = fcstats[x.key];
+    return st && st.a > st.g;
+  });
+  const unseenWeak = all.filter(x => !fcstats[x.key]?.g && weakCats.includes(x.card.cat));
+  const reviewWeak = all
+    .filter(x => {
+      const st = fcstats[x.key];
+      return st?.g && weakCats.includes(x.card.cat) && (st.a > 0 || (st.last || 0) < Date.now() - 7 * 86400000);
+    })
+    .sort((a, b) => (fcstats[a.key].last || 0) - (fcstats[b.key].last || 0));
+  const unseenOther = all.filter(x => !fcstats[x.key]?.g && !weakCats.includes(x.card.cat));
+
+  const target = Math.min(CRAM_FLASH_TARGET, all.length);
+  const pick = [];
+  const used = new Set();
+  const take = arr => {
+    for (const x of arr) {
+      if (pick.length >= target) break;
+      if (!used.has(x.key)) { used.add(x.key); pick.push(x.card); }
+    }
+  };
+
+  take(shuffle(struggling));
+  const nAgain = pick.length;
+  take(shuffle(unseenWeak));
+  const nWeakNew = pick.length - nAgain;
+  take(reviewWeak);
+  const nReview = pick.length - nAgain - nWeakNew;
+  take(shuffle(unseenOther));
+  const nFresh = pick.length - nAgain - nWeakNew - nReview;
+
+  return { cards: pick, counts: { again: nAgain, weakNew: nWeakNew, review: nReview, fresh: nFresh }, weakCats };
+}
+
+function startCramFlash() {
+  const c = buildCramFlash();
+  if (!c.cards.length) { alert("No flashcards available for a cram deck yet!"); return; }
+  APP.flash = {
+    cat: "cram",
+    deck: shuffle(c.cards),
+    i: 0,
+    done: 0,
+    total: c.cards.length,
+    flipped: false,
+    cram: c,
+  };
+  APP.view = "flash";
+  render();
+}
+
+function cramFlashDesc(c) {
+  const parts = [];
+  if (c.counts.again) parts.push("<b>" + c.counts.again + "</b> need review");
+  if (c.counts.weakNew) parts.push("<b>" + c.counts.weakNew + "</b> new from weak topics");
+  if (c.counts.review) parts.push("<b>" + c.counts.review + "</b> weak-topic review");
+  if (c.counts.fresh) parts.push("<b>" + c.counts.fresh + "</b> fresh");
+  return parts.join(" · ") + " &nbsp;🎯 " + c.weakCats.map(id => catIcon(id) + " " + esc(catName(id))).join(", ");
 }
 
 function cramDesc(c) {
@@ -1025,11 +1159,20 @@ document.addEventListener("click", e => {
     APP.view = "quiz";
     render();
   }
+  else if (act === "startCramFlash") startCramFlash();
 
   /* flashcards */
+  else if (act === "startFlashDeck") {
+    const sel = $("#flashTopic");
+    startFlash(sel ? sel.value : "all");
+    render();
+  }
+  else if (act === "flashDone") { APP.flash = null; render(); }
   else if (act === "flashFlip") { APP.flash.flipped = !APP.flash.flipped; render(); }
   else if (act === "flashGot") {
     const f = APP.flash;
+    const card = f.deck[f.i];
+    if (card) recordFcGot(card);
     f.done++; f.i++; f.flipped = false;
     touchStreak(); addXP(2);
     render();
@@ -1037,12 +1180,17 @@ document.addEventListener("click", e => {
   else if (act === "flashAgain") {
     const f = APP.flash;
     const card = f.deck.splice(f.i, 1)[0];
+    if (card) recordFcAgain(card);
     const insertAt = Math.min(f.deck.length, f.i + 4 + Math.floor(Math.random() * 3));
     f.deck.splice(insertAt, 0, card);
     f.flipped = false;
     render();
   }
-  else if (act === "flashRestart") { startFlash(APP.flash.cat); render(); }
+  else if (act === "flashRestart") {
+    if (APP.flash.cram) startCramFlash();
+    else startFlash(APP.flash.cat);
+    render();
+  }
 
   /* exam */
   else if (act === "startExam") {

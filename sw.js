@@ -1,5 +1,5 @@
 /* RotationReady service worker — cache-first offline support */
-const CACHE = "rotationready-v3";
+const CACHE = "rotationready-v4";
 
 const PRECACHE = [
   "./",
