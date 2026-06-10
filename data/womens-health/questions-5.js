@@ -231,7 +231,7 @@ window.__ROT["womens-health"].questions = (window.__ROT["womens-health"].questio
   },
   {
     id: "con-14", cat: "contraception",
-    stem: "A 22-year-old woman had a etonogestrel subdermal implant placed 2 years ago. She is happy with the method and wants to continue. What counseling is most accurate regarding duration of use?",
+    stem: "A 22-year-old woman had an etonogestrel subdermal implant placed 2 years ago. She is happy with the method and wants to continue. What counseling is most accurate regarding duration of use?",
     choices: [
       "The implant is FDA-approved for 3 years; it can be replaced at or before that time",
       "It must be removed and replaced every year",
